@@ -230,7 +230,7 @@ def j_type_instruction(instruction, labels, register_map):
         return f'{checkReg} at line {program_counter} ({" ".join(instruction)})'
 
     imm_binary = label_to_bin(lab, 20, labels)
-    imm_20__10_1__11__19_12 = imm_binary[-20] + imm_binary[-11:-1] + imm_binary[-11] + imm_binary[-20:-12]
+    imm_20__10_1__11__19_12 = imm_binary[-21] + imm_binary[-11:-1] + imm_binary[-12] + imm_binary[-20:-12]
 
     if len(imm_20__10_1__11__19_12)>20:
         return f'Invalid imm ({lab}) of length {len(imm_20__10_1__11__19_12)} at line {program_counter} ({" ".join(instruction)})'
