@@ -68,7 +68,7 @@ def r_type_instruction(instruction, register_map):
         rs2_encoding = register_map[rs2]
     else:
         return f'{checkReg} at line {program_counter} ({" ".join(instruction)})'
-    
+
     return funct7 + rs2_encoding + rs1_encoding + funct3 + rd_encoding + opcode
 
 def i_type_instruction(instruction, register_map):
@@ -202,7 +202,7 @@ def u_type_instruction(instruction, register_map):
 
     opcode = opcode_map[op]
 
-    imm_binary = deci_to_bin(imm,32) 
+    imm_binary = deci_to_bin(imm,32)
     imm_31_12 = imm_binary[:-12]
 
     if len(imm_31_12)>20:
@@ -230,15 +230,83 @@ def j_type_instruction(instruction, labels, register_map):
         return f'{checkReg} at line {program_counter} ({" ".join(instruction)})'
 
     imm_binary = label_to_bin(lab, 20, labels)
-    imm_20__10_1__11__19_12 = imm_binary[-21] + imm_binary[-11:-1] + imm_binary[-12] + imm_binary[-20:-12]
+    imm_20__10_1__11__19_12 = imm_binary[-20] + imm_binary[-11:-1] + imm_binary[-11] + imm_binary[-20:-12]
 
     if len(imm_20__10_1__11__19_12)>20:
         return f'Invalid imm ({lab}) of length {len(imm_20__10_1__11__19_12)} at line {program_counter} ({" ".join(instruction)})'
 
     return imm_20__10_1__11__19_12 + rd_encoding + opcode
 
+def bonus_0r_type_instruction(instruction):
+    op = instruction[0]
+    opcode_map = {
+        'rst': '0000000',
+        'halt': '1111111'
+    }
+    opcode = opcode_map[op]
+
+    padd25 = '0000000000000000000000000'
+    return padd25 + opcode
+
+
+def bonus_2r_type_instruction(instruction, register_map):
+    op = instruction[0]
+    rd = instruction[1]
+    rs1 = instruction[2]
+
+    opcode = '1010101'
+
+    checkReg=check_reg_name(rs1,register_map)
+    if checkReg==True:
+        rs1_encoding = register_map[rs1]
+    else:
+        return f'{checkReg} at line {program_counter} ({" ".join(instruction)})'
+
+    checkReg=check_reg_name(rd,register_map)
+    if checkReg==True:
+        rd_encoding = register_map[rd]
+    else:
+        return f'{checkReg} at line {program_counter} ({" ".join(instruction)})'
+
+    padd3 = '000'
+    padd12 = '000000000000'
+
+    return padd12 + rs1_encoding + padd3 + rd_encoding + opcode
+
+def bonus_3r_type_instruction(instruction, register_map):
+    op = instruction[0]
+    rd = instruction[1]
+    rs1 = instruction[2]
+    rs2 = instruction[3]
+
+    opcode = '0101010'
+
+    checkReg=check_reg_name(rd,register_map)
+    if checkReg==True:
+        rd_encoding = register_map[rd]
+    else:
+        return f'{checkReg} at line {program_counter} ({" ".join(instruction)})'
+
+    checkReg=check_reg_name(rs1,register_map)
+    if checkReg==True:
+        rs1_encoding = register_map[rs1]
+    else:
+        return f'{checkReg} at line {program_counter} ({" ".join(instruction)})'
+
+    checkReg=check_reg_name(rs2,register_map)
+    if checkReg==True:
+        rs2_encoding = register_map[rs2]
+    else:
+        return f'{checkReg} at line {program_counter} ({" ".join(instruction)})'
+
+    padd3 = '000'
+    padd7 = '0000000'
+
+    return padd7 + rs2_encoding + rs1_encoding + padd3 + rd_encoding + opcode
+
 def tokenise_assembly_text(assembly_text):
     tokenised_lines = []
+    assembly_text = assembly_text.replace(':', ': ')
     assembly_text = assembly_text.replace(',', ' ')
     assembly_text = assembly_text.replace('(', ' ')
     assembly_text = assembly_text.replace(')', ' ')
@@ -301,6 +369,10 @@ def main(read_filepath,write_filepath):
     B_TYPE = ['beq', 'bne', 'blt', 'bge', 'bltu', 'bgeu']
     U_TYPE = ['lui', 'auipc']
     J_TYPE = ['jal']
+    BONUS_0R_TYPE = ['rst', 'halt']
+    BONUS_2R_TYPE = ['rvrs']
+    BONUS_3R_TYPE = ['mul']
+
 
     for line in ASM: # for labels
         if isNewLabel(line[0], labels):
@@ -327,21 +399,23 @@ def main(read_filepath,write_filepath):
             binary.append(u_type_instruction(line, register_map))
         elif line[0] in J_TYPE:
             binary.append(j_type_instruction(line, labels, register_map))
+        elif line[0] in BONUS_3R_TYPE:
+            binary.append(bonus_3r_type_instruction(line, register_map))
+        elif line[0] in BONUS_2R_TYPE:
+            binary.append(bonus_2r_type_instruction(line, register_map))
+        elif line[0] in BONUS_0R_TYPE:
+            binary.append(bonus_0r_type_instruction(line))
         else:
-            with open('bin.txt','w') as file :
+            with open(write_filepath,'w') as file :
                 file.write(f'Incorrect Instruction "{line[0]}" at line {program_counter} ({" ".join(line)})')
                 return
             #handling error in instruction name type
         program_counter+=1
 
-    if hault=="":
-        with open('bin.txt','w') as file :
-            file.write("Error: Virtual hault not present at end of instructions.")
-            return
-    elif ASM[-1]!=hault:
-        with open('bin.txt','w') as file :
-            file.write("Error: Virtual hault present but not at end of instructions.")
-            return
+    # if hault=="":
+    #     with open(write_filepath,'w') as file :
+    #         file.write("Error: Virtual hault not present at end of instructions.")
+    #         return
 
     with open(write_filepath, 'w') as file:
         for i in binary:
@@ -351,9 +425,17 @@ def main(read_filepath,write_filepath):
                 return
             file.write(str(i))
             file.write('\n')
-        
+
 
 read_filepath = sys.argv[1]
 write_filepath = sys.argv[2]
+# read_filepath = 'asm.txt'
+# write_filepath = 'bin.txt'
+
+# with open(read_filepath, 'w') as file:
+#     file.write('''beq zero,zero,0''')
 
 main(read_filepath, write_filepath)
+
+# with open(write_filepath, 'r') as file:
+#     print(file.read())

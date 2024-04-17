@@ -1,0 +1,8 @@
+rst
+addi ra, zero, 10      
+addi sp, zero, 5       
+mul gp, ra, sp
+rvrs tp, gp
+rst
+halt
+addi tp, zero, 23
